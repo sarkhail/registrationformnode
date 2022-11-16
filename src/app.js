@@ -1,10 +1,12 @@
+require('dotenv').config()
 const express = require("express");
 const app = express();
 require("./db/conn");
 const Register = require("./models/registers");
 const hbs = require("hbs");
 const path = require("path");
-const { template } = require("handlebars");
+const { templates } = require("handlebars");
+const bcrypt = require("bcrypt");
 const port = process.env.PORT || 5000;
 const static_path = path.join(__dirname, "../public");
 const template_path = path.join(__dirname, "../templates/views");
@@ -40,7 +42,8 @@ app.post("/register", async(req, res)=>{
             password:password,
             confirmpassword:cpassword
         })      
-        
+
+        const token = await registerEmployee.generateAuthToken();
         const registered = await registerEmployee.save();
         res.status(201).render("index");
     }   
@@ -59,7 +62,11 @@ app.post("/login", async(req, res)=>{
         const password = req.body.password;
 
             const userEmail = await Register.findOne({email:email});
-            if(userEmail.password == password){
+
+            const isMatch = await bcrypt.compare(password, userEmail.password);
+            const token = await userEmail.generateAuthToken();
+            console.log("the token par is" +token);
+            if(isMatch){
                 res.status(201).render("index")
             }else{
                 res.status(400).send("Invalid Emial/Password")
